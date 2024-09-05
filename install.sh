@@ -14,6 +14,7 @@ fi
 
 # Détection de la distribution
 if [ -f /etc/os-release ]; then
+  # shellcheck disable=SC1091
   . /etc/os-release
   OS=$ID
   OS_LIKE=$ID_LIKE
@@ -30,7 +31,12 @@ if [[ "$OS" == "fedora" || "$OS_LIKE" == "fedora" ]]; then
 elif [[ "$OS" == "arch" || "$OS_LIKE" == "arch" ]]; then
   echo -e "${GREEN}Système basé sur Arch Linux détecté.${NC}"
   echo -e "${YELLOW}Installation de KVM, QEMU, et Virt-Manager...${NC}"
-  pacman -S qemu virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat dmidecode libguestfs
+  pacman -S --noconfirm qemu virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat dmidecode libguestfs
+elif [[ "$OS" == "ubuntu" || "$OS_LIKE" == "ubuntu" || "$OS_LIKE" == "debian" || "$OS" == "debian" || "$OS_LIKE" == "linuxmint" || "$OS" == "linuxmint" ]]; then
+  echo -e "${GREEN}Système basé sur Debian/Ubuntu détecté.${NC}"
+  echo -e "${YELLOW}Installation de KVM, QEMU, et Virt-Manager...${NC}"
+  apt update
+  apt install -y virt-manager
 else
   echo -e "${RED}Distribution non supportée : $OS${NC}" >&2
   exit 1
@@ -45,9 +51,11 @@ sed -i 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/' /etc/libvir
 echo -e "${YELLOW}Activation et démarrage du service libvirtd...${NC}"
 systemctl enable --now libvirtd
 
-# Ajout de l'utilisateur actuel au groupe libvirt
-echo -e "${YELLOW}Ajout de l'utilisateur $(whoami) au groupe libvirt...${NC}"
-usermod -a -G libvirt $(whoami)
+# Ajout de l'utilisateur initial (non root) au groupe libvirt et kvm
+CURRENT_USER=${SUDO_USER:-$(whoami)}
+echo -e "${YELLOW}Ajout de l'utilisateur ${CURRENT_USER} au groupe libvirt et kvm...${NC}"
+usermod -a -G libvirt "${CURRENT_USER}"
+usermod -a -G kvm "${CURRENT_USER}"
 
 # Redémarrage du service libvirtd
 systemctl restart libvirtd.service
