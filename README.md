@@ -89,8 +89,8 @@ sudo systemctl restart libvirtd.service
 Ajoutez votre utilisateur au groupe `libvirt` et `kvm` :
 
 ```bash
-usermod -a -G libvirt $(whoami)
-usermod -a -G kvm $(whoami)
+sudo usermod -a -G libvirt $(whoami)
+sudo usermod -a -G kvm $(whoami)
 ```
 
 ### Redémarrage du système
