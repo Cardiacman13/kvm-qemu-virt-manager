@@ -52,7 +52,7 @@ Installez les paquets nécessaires pour KVM, QEMU et d'autres outils de gestion 
 Archlinux :
 
 ```bash
-sudo pacman -S qemu virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat dmidecode libguestfs
+sudo pacman -S qemu-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat dmidecode libguestfs
 ```
 
 Fedora :
