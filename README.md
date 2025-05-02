@@ -13,6 +13,7 @@ Ce dépôt contient **au choix** un script Bash ou un guide pour installer et co
   - [Configuration des permissions](#configuration-des-permissions)
   - [Redémarrage du système](#redémarrage-du-système)
 - [Après le script](#après-le-script)
+- [Pare-feu et sécurité](#pare-feu-et-sécurité)
 
 ## Prérequis
 
@@ -106,3 +107,30 @@ sudo reboot
 Il faudra juste activer la connexion comme sur la capture d'écran ci-dessous et vous êtes bon pour créer une VM.
 
 ![virt1](images/virt1.png)
+
+## Pare-feu et sécurité
+
+Les pare-feu peuvent parfois bloquer les connexions nécessaires pour le bon fonctionnement de KVM, QEMU et Virt-Manager. Assurez-vous que les règles de pare-feu permettent les connexions suivantes :
+
+- **Ports TCP/UDP** : Les ports utilisés par `libvirtd` et les machines virtuelles doivent être ouverts.
+- **Services spécifiques** : Autorisez les services `libvirtd` et `virt-manager` dans votre pare-feu.
+
+Pour configurer le pare-feu, vous pouvez utiliser des outils comme `ufw` (Uncomplicated Firewall) sur Debian/Ubuntu ou `firewalld` sur Fedora. Voici quelques exemples de commandes :
+
+### UFW (Debian/Ubuntu)
+
+```bash
+sudo ufw allow libvirtd
+sudo ufw allow virt-manager
+sudo ufw reload
+```
+
+### Firewalld (Fedora)
+
+```bash
+sudo firewall-cmd --add-service=libvirt --permanent
+sudo firewall-cmd --add-service=virt-manager --permanent
+sudo firewall-cmd --reload
+```
+
+En suivant ces étapes, vous devriez être en mesure de configurer correctement votre environnement pour utiliser KVM, QEMU et Virt-Manager sans être bloqué par des règles de pare-feu.
