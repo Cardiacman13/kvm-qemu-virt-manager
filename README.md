@@ -1,34 +1,34 @@
-# Installation de KVM, QEMU et Virt-Manager sur base Arch Linux, Debian, Ubuntu et Fedora
+# Installation of KVM, QEMU, and Virt-Manager on Arch Linux, Debian, Ubuntu, and Fedora
 
-Ce dépôt contient **au choix** un script Bash ou un guide pour installer et configurer KVM (Kernel-based Virtual Machine), QEMU, et Virt-Manager sur des systèmes basés **Arch Linux, Manjaro, Debian, Ubuntu et Fedora**.
+This repository contains **either** a Bash script or a guide to install and configure KVM (Kernel-based Virtual Machine), QEMU, and Virt-Manager on systems based on **Arch Linux, Manjaro, Debian, Ubuntu, and Fedora**.
 
-## Table des matières
+## Table of Contents
 
-- [Prérequis](#prérequis)
-- [Installation avec le script](#installation-avec-le-script)
-  - [Ce que fait le script](#ce-que-fait-le-script)
-- [Installation à la main](#installation-à-la-main)
-  - [Installation des paquets nécessaires](#installation-des-paquets-nécessaires)
-  - [Configuration du service `libvirtd`](#configuration-du-service-libvirtd)
-  - [Configuration des permissions](#configuration-des-permissions)
-  - [Redémarrage du système](#redémarrage-du-système)
-- [Après le script](#après-le-script)
-- [Pare-feu et sécurité](#pare-feu-et-sécurité)
+- [Prerequisites](#prerequisites)
+- [Installation with the Script](#installation-with-the-script)
+  - [What the Script Does](#what-the-script-does)
+- [Manual Installation](#manual-installation)
+  - [Installation of Required Packages](#installation-of-required-packages)
+  - [Configuration of the `libvirtd` Service](#configuration-of-the-libvirtd-service)
+  - [Configuration of Permissions](#configuration-of-permissions)
+  - [System Reboot](#system-reboot)
+- [After the Script](#after-the-script)
+- [Firewall and Security](#firewall-and-security)
 
-## Prérequis
+## Prerequisites
 
-- Un système basé sur Arch Linux, Ubuntu, Debian ou Fedora avec accès sudo.
-- Une connexion internet active pour télécharger les paquets nécessaires.
-- Git installé sur votre système :
-  - Archlinux / Manjaro : `sudo pacman -S git`
-  - Fedora : `sudo dnf install -y git`
-  - Debian / Ubuntu : `sudo apt update && sudo apt install -y git`
-- Votre processeur doit supporter la virtualisation (Intel VT-x ou AMD-V).
-- La virtualisation Intel VT-x ou AMD-V doit être activée dans le BIOS.
+- A system based on Arch Linux, Ubuntu, Debian, or Fedora with sudo access.
+- An active internet connection to download the necessary packages.
+- Git installed on your system:
+  - Archlinux / Manjaro: `sudo pacman -S git`
+  - Fedora: `sudo dnf install -y git`
+  - Debian / Ubuntu: `sudo apt update && sudo apt install -y git`
+- Your processor must support virtualization (Intel VT-x or AMD-V).
+- Intel VT-x or AMD-V virtualization must be enabled in the BIOS.
 
-## Installation avec le script
+## Installation with the Script
 
-Clonez le dépôt et exécutez le script d'installation :
+Clone the repository and execute the installation script:
 
 ```bash
 git clone https://codeberg.org/Gaming-Linux-FR/KVM-QEMU-Virt-Manager
@@ -37,49 +37,49 @@ chmod +x install.sh
 sudo ./install.sh
 ```
 
-### Ce que fait le script
+### What the Script Does
 
-1. **Mise à jour du système** : Met à jour les paquets de votre système pour s'assurer que toutes les dépendances sont actuelles.
-2. **Installation des paquets** : Installe QEMU, Virt-Manager, et d'autres outils nécessaires pour la gestion des VM.
-3. **Configuration des permissions** : Configure `/etc/libvirt/libvirtd.conf` pour permettre à l'utilisateur actuel de gérer les VM et ajoute l'utilisateur au groupe `libvirt`.
-4. **Redémarrage des services nécessaires** : Redémarre les services pour que les changements prennent effet immédiatement.
+1. **System Update**: Updates the packages on your system to ensure all dependencies are current.
+2. **Package Installation**: Installs QEMU, Virt-Manager, and other necessary tools for VM management.
+3. **Permission Configuration**: Configures `/etc/libvirt/libvirtd.conf` to allow the current user to manage VMs and adds the user to the `libvirt` group.
+4. **Restarting Necessary Services**: Restarts the services so that the changes take effect immediately.
 
-## Installation à la main
+## Manual Installation
 
-### Installation des paquets nécessaires
+### Installation of Required Packages
 
-Installez les paquets nécessaires pour KVM, QEMU et d'autres outils de gestion de la virtualisation :
+Install the necessary packages for KVM, QEMU, and other virtualization management tools:
 
-Archlinux :
+Archlinux:
 
 ```bash
 sudo pacman -S qemu-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat dmidecode libguestfs
 ```
 
-Fedora :
+Fedora:
 
 ```bash
 sudo dnf install -y @virtualization
 ```
 
-Debian / Ubuntu :
+Debian / Ubuntu:
 
 ```bash
 sudo apt update
 sudo apt install -y virt-manager
 ```
 
-### Configuration du service `libvirtd`
+### Configuration of the `libvirtd` Service
 
-Activez et démarrez le service `libvirtd` :
+Enable and start the `libvirtd` service:
 
 ```bash
 sudo systemctl enable --now libvirtd.service
 ```
 
-### Configuration des permissions
+### Configuration of Permissions
 
-Modifiez les configurations pour permettre à l'utilisateur d'utiliser KVM :
+Modify the configurations to allow the user to use KVM:
 
 ```bash
 sudo sed -i 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/' /etc/libvirt/libvirtd.conf
@@ -87,35 +87,35 @@ sudo sed -i 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/' /etc/l
 sudo systemctl restart libvirtd.service
 ```
 
-Ajoutez votre utilisateur au groupe `libvirt` et `kvm` :
+Add your user to the `libvirt` and `kvm` groups:
 
 ```bash
 sudo usermod -a -G libvirt $(whoami)
 sudo usermod -a -G kvm $(whoami)
 ```
 
-### Redémarrage du système
+### System Reboot
 
-Après avoir terminé la configuration, il est conseillé de redémarrer votre système pour que toutes les modifications prennent effet :
+After completing the configuration, it is recommended to reboot your system so that all changes take effect:
 
 ```bash
 sudo reboot
 ```
 
-## Après le script
+## After the Script
 
-Il faudra juste activer la connexion comme sur la capture d'écran ci-dessous et vous êtes bon pour créer une VM.
+You will just need to activate the connection as shown in the screenshot below, and you are ready to create a VM.
 
 ![virt1](images/virt1.png)
 
-## Pare-feu et sécurité
+## Firewall and Security
 
-Les pare-feu peuvent parfois bloquer les connexions nécessaires pour le bon fonctionnement de KVM, QEMU et Virt-Manager. Assurez-vous que les règles de pare-feu permettent les connexions suivantes :
+Firewalls can sometimes block the connections necessary for the proper functioning of KVM, QEMU, and Virt-Manager. Ensure that the firewall rules allow the following connections:
 
-- **Ports TCP/UDP** : Les ports utilisés par `libvirtd` et les machines virtuelles doivent être ouverts.
-- **Services spécifiques** : Autorisez les services `libvirtd` et `virt-manager` dans votre pare-feu.
+- **TCP/UDP Ports**: The ports used by `libvirtd` and virtual machines must be open.
+- **Specific Services**: Allow the `libvirtd` and `virt-manager` services in your firewall.
 
-Pour configurer le pare-feu, vous pouvez utiliser des outils comme `ufw` (Uncomplicated Firewall) sur Debian/Ubuntu ou `firewalld` sur Fedora. Voici quelques exemples de commandes :
+To configure the firewall, you can use tools like `ufw` (Uncomplicated Firewall) on Debian/Ubuntu or `firewalld` on Fedora. Here are some example commands:
 
 ### UFW (Debian/Ubuntu)
 
@@ -133,4 +133,4 @@ sudo firewall-cmd --add-service=virt-manager --permanent
 sudo firewall-cmd --reload
 ```
 
-En suivant ces étapes, vous devriez être en mesure de configurer correctement votre environnement pour utiliser KVM, QEMU et Virt-Manager sans être bloqué par des règles de pare-feu.
+By following these steps, you should be able to correctly configure your environment to use KVM, QEMU, and Virt-Manager without being blocked by firewall rules.
