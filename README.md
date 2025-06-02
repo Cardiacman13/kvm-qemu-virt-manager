@@ -31,7 +31,7 @@ This repository contains **either** a Bash script or a guide to install and conf
 Clone the repository and execute the installation script:
 
 ```bash
-git clone https://codeberg.org/Gaming-Linux-FR/KVM-QEMU-Virt-Manager
+git clone https://github.com/Cardiacman13/kvm-qemu-virt-manager.git
 cd KVM-QEMU-Virt-Manager
 chmod +x install.sh
 sudo ./install.sh
