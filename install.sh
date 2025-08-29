@@ -76,7 +76,7 @@ case "${OS}" in
     install_or_exit dnf -y install @virtualization
     ;;
 
-  arch)
+  arch|cachyos)
     color_echo "$GREEN" "Arch Linux-based system detected."
     color_echo "$YELLOW" "Updating the system..."
     install_or_exit pacman -Syu --noconfirm
