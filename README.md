@@ -32,7 +32,7 @@ Clone the repository and execute the installation script:
 
 ```bash
 git clone https://github.com/Cardiacman13/kvm-qemu-virt-manager.git
-cd KVM-QEMU-Virt-Manager
+cd kvm-qemu-virt-manager
 chmod +x install.sh
 sudo ./install.sh
 ```
