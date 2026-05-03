@@ -1,6 +1,6 @@
-# Installation of KVM, QEMU, and Virt-Manager on Arch Linux, Debian, Ubuntu, and Fedora
+# Installation of KVM, QEMU, and Virt-Manager (Modular Architecture)
 
-This repository contains **either** a Bash script or a guide to install and configure KVM (Kernel-based Virtual Machine), QEMU, and Virt-Manager on systems based on **Arch Linux, Manjaro, Debian, Ubuntu, and Fedora**.
+This repository provides a Bash script and a detailed guide to install and configure KVM, QEMU, and Virt-Manager. It is specifically updated to support the **new modular Libvirt architecture** on **Arch Linux, Manjaro, Debian, Ubuntu, and Fedora**.
 
 ## Table of Contents
 
@@ -8,30 +8,30 @@ This repository contains **either** a Bash script or a guide to install and conf
 - [Installation with the Script](#installation-with-the-script)
   - [What the Script Does](#what-the-script-does)
 - [Manual Installation](#manual-installation)
-  - [Installation of Required Packages](#installation-of-required-packages)
-  - [Configuration of the `libvirtd` Service](#configuration-of-the-libvirtd-service)
-  - [Configuration of Permissions](#configuration-of-permissions)
-  - [System Reboot](#system-reboot)
-- [After the Script](#after-the-script)
+  - [1. Package Installation](#1-package-installation)
+  - [2. Transition to Modular Daemons](#2-transition-to-modular-daemons)
+  - [3. Group Permissions](#3-group-permissions)
+- [Post-Installation](#post-installation)
 - [Firewall and Security](#firewall-and-security)
+
+---
 
 ## Prerequisites
 
-- A system based on Arch Linux, Ubuntu, Debian, or Fedora with sudo access.
-- An active internet connection to download the necessary packages.
-- Git installed on your system:
-  - Archlinux / Manjaro: `sudo pacman -S git`
-  - Fedora: `sudo dnf install -y git`
-  - Debian / Ubuntu: `sudo apt update && sudo apt install -y git`
-- Your processor must support virtualization (Intel VT-x or AMD-V).
-- Intel VT-x or AMD-V virtualization must be enabled in the BIOS.
+*   A system based on Arch, Debian/Ubuntu, or Fedora with `sudo` access.
+*   Processor supporting hardware virtualization (**Intel VT-x** or **AMD-V**) enabled in the BIOS.
+*   Git installed:
+    *   **Arch**: `sudo pacman -S git`
+    *   **Fedora**: `sudo dnf install git`
+    *   **Debian/Ubuntu**: `sudo apt update && sudo apt install git`
+
+---
 
 ## Installation with the Script
 
-Clone the repository and execute the installation script:
-
+This is the recommended method. It automatically handles the migration from the old monolithic daemon to the new modular services.
 ```bash
-git clone https://github.com/Cardiacman13/kvm-qemu-virt-manager.git
+git clone [https://github.com/Cardiacman13/kvm-qemu-virt-manager.git](https://github.com/Cardiacman13/kvm-qemu-virt-manager.git)
 cd kvm-qemu-virt-manager
 chmod +x install.sh
 sudo ./install.sh
@@ -39,98 +39,89 @@ sudo ./install.sh
 
 ### What the Script Does
 
-1. **System Update**: Updates the packages on your system to ensure all dependencies are current.
-2. **Package Installation**: Installs QEMU, Virt-Manager, and other necessary tools for VM management.
-3. **Permission Configuration**: Configures `/etc/libvirt/libvirtd.conf` to allow the current user to manage VMs and adds the user to the `libvirt` group.
-4. **Restarting Necessary Services**: Restarts the services so that the changes take effect immediately.
+1.  **System Update**: Ensures all dependencies are current.
+2.  **Package Installation**: Installs QEMU, Virt-Manager, and bridge utilities.
+3.  **Modular Migration**: Stops and masks the old `libvirtd` service to prevent conflicts.
+4.  **Service Activation**: Enables the specific modular sockets (`virtqemud`, `virtnetworkd`, etc.) required for virtualization.
+5.  **User Permissions**: Adds your user to the `libvirt` and `kvm` groups.
+
+---
 
 ## Manual Installation
 
-### Installation of Required Packages
+### 1. Package Installation
 
-Install the necessary packages for KVM, QEMU, and other virtualization management tools:
-
-Archlinux:
-
+**Arch Linux / Manjaro:**
 ```bash
 sudo pacman -S qemu-full virt-manager virt-viewer dnsmasq vde2 bridge-utils openbsd-netcat dmidecode libguestfs
 ```
 
-Fedora:
-
+**Fedora:**
 ```bash
 sudo dnf install -y @virtualization
 ```
 
-Debian / Ubuntu:
-
+**Debian / Ubuntu:**
 ```bash
-sudo apt update
-sudo apt install -y virt-manager
+sudo apt update && sudo apt install -y virt-manager
 ```
 
-### Configuration of the `libvirtd` Service
+### 2. Transition to Modular Daemons
 
-Enable and start the `libvirtd` service:
+Libvirt is moving away from the monolithic `libvirtd` daemon [documentation](https://libvirt.org/daemons.html#modular-driver-daemons). You must now use modular daemons for better stability and security.
 
+**Stop and mask the old service:**
 ```bash
-sudo systemctl enable --now libvirtd.service
+sudo systemctl stop libvirtd.service
+sudo systemctl disable libvirtd.service
+sudo systemctl mask libvirtd.service
 ```
 
-### Configuration of Permissions
-
-Modify the configurations to allow the user to use KVM:
-
+**Enable the new modular sockets:**
+Run this loop to activate the necessary drivers (QEMU, Network, Storage, etc.):
 ```bash
-sudo sed -i 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/' /etc/libvirt/libvirtd.conf
-sudo sed -i 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/' /etc/libvirt/libvirtd.conf
-sudo systemctl restart libvirtd.service
+for drv in qemu interface network nodedev nwfilter secret storage
+do
+  sudo systemctl unmask virt${drv}d.socket
+  sudo systemctl enable --now virt${drv}d.socket
+done
 ```
 
-Add your user to the `libvirt` and `kvm` groups:
+### 3. Group Permissions
+
+Add your user to the management groups. **Note:** Settings like `unix_sock_group` in `libvirtd.conf` are ignored when using systemd socket activation. Group access is now managed directly via the system groups:
 
 ```bash
 sudo usermod -a -G libvirt $(whoami)
 sudo usermod -a -G kvm $(whoami)
 ```
 
-### System Reboot
+---
 
-After completing the configuration, it is recommended to reboot your system so that all changes take effect:
+## Post-Installation
 
-```bash
-sudo reboot
-```
-
-## After the Script
-
-You will just need to activate the connection as shown in the screenshot below, and you are ready to create a VM.
+1.  **Reboot**: A full reboot is required for group changes to take effect.
+2.  **Virt-Manager**: Open Virt-Manager and activate the connection to "QEMU/KVM" as shown below:
 
 ![virt1](images/virt1.png)
 
+---
+
 ## Firewall and Security
 
-Firewalls can sometimes block the connections necessary for the proper functioning of KVM, QEMU, and Virt-Manager. Ensure that the firewall rules allow the following connections:
-
-- **TCP/UDP Ports**: The ports used by `libvirtd` and virtual machines must be open.
-- **Specific Services**: Allow the `libvirtd` and `virt-manager` services in your firewall.
-
-To configure the firewall, you can use tools like `ufw` (Uncomplicated Firewall) on Debian/Ubuntu or `firewalld` on Fedora. Here are some example commands:
+If you encounter network issues with your VMs, ensure your firewall allows Libvirt traffic.
 
 ### UFW (Debian/Ubuntu)
-
 ```bash
 sudo ufw allow libvirtd
-sudo ufw allow virt-manager
 sudo ufw reload
 ```
 
-### Firewalld (Fedora)
-
+### Firewalld (Fedora/Arch)
 ```bash
 sudo firewall-cmd --add-service=libvirt --permanent
 sudo firewall-cmd --add-service=virt-manager --permanent
 sudo firewall-cmd --reload
 ```
 
-By following these steps, you should be able to correctly configure your environment to use KVM, QEMU, and Virt-Manager without being blocked by firewall rules.
+> **Warning:** Do not attempt to modify socket permissions in `/etc/libvirt/libvirtd.conf` anymore. If you need custom socket permissions, you must now override the systemd `.socket` unit files.

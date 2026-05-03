@@ -17,17 +17,12 @@ NC='\033[0m' # No Color
 #  Utility Functions       #
 ##############################
 color_echo() {
-  # Displays text with the chosen color
-  # Usage: color_echo $GREEN "Message"
   local color="$1"
   shift
   echo -e "${color}$*${NC}"
 }
 
 install_or_exit() {
-  # Executes the command passed as an argument
-  # If the command fails, the script stops
-  # Usage: install_or_exit dnf install -y @virtualization
   if ! "$@"; then
     color_echo "$RED" "The command \"$*\" failed. Aborting."
     exit 1
@@ -85,8 +80,6 @@ case "${OS}" in
     ;;
 
   ubuntu|debian|linuxmint)
-    # Finer detection via ID_LIKE if necessary
-    # (For example, if ID=pop for Pop!_OS, ID_LIKE=ubuntu)
     color_echo "$GREEN" "Debian/Ubuntu-based system detected."
     color_echo "$YELLOW" "Updating the system..."
     install_or_exit apt update
@@ -96,7 +89,6 @@ case "${OS}" in
     ;;
 
   *)
-    # If OS is unknown but ID_LIKE is known, attempt detection via ID_LIKE
     if [[ "${OS_LIKE}" == *"fedora"* ]]; then
       color_echo "$GREEN" "Fedora-related distribution detected (ID_LIKE=${OS_LIKE})."
       color_echo "$YELLOW" "Updating the system..."
@@ -127,27 +119,9 @@ case "${OS}" in
 esac
 
 ######################################################
-# Configuration of libvirtd if the file exists       #
-######################################################
-color_echo "$YELLOW" "Configuring permissions for libvirtd..."
-if [ -f /etc/libvirt/libvirtd.conf ]; then
-  sed -i 's/#unix_sock_group = "libvirt"/unix_sock_group = "libvirt"/' /etc/libvirt/libvirtd.conf
-  sed -i 's/#unix_sock_rw_perms = "0770"/unix_sock_rw_perms = "0770"/' /etc/libvirt/libvirtd.conf
-else
-  color_echo "$RED" "The file /etc/libvirt/libvirtd.conf is not found. The configuration may not be complete."
-fi
-
-######################################################
-# Enabling and starting the libvirtd service         #
-######################################################
-color_echo "$YELLOW" "Enabling and starting the libvirtd service..."
-install_or_exit systemctl enable --now libvirtd
-
-######################################################
 #  Adding the user to the libvirt and kvm groups     #
 ######################################################
 CURRENT_USER=${SUDO_USER:-$(whoami)}
-# Just in case the variable is empty (rare, but possible)
 if [ -z "$CURRENT_USER" ]; then
   color_echo "$RED" "Unable to determine the current user (SUDO_USER or whoami)."
   exit 1
@@ -166,13 +140,44 @@ else
   color_echo "$RED" "The 'kvm' group is not found on this system."
 fi
 
-#############################
-# Restarting the service    #
-#############################
-install_or_exit systemctl restart libvirtd.service
+######################################################
+# Transition to Modular Libvirt Daemons              #
+######################################################
+color_echo "$YELLOW" "Configuring modular Libvirt daemons..."
+
+# 1. Stop and disable the old monolithic daemon if it's active
+if systemctl is-active --quiet libvirtd.service || systemctl is-active --quiet libvirtd.socket; then
+  color_echo "$YELLOW" "Monolithic libvirtd detected. Stopping and disabling..."
+  systemctl stop libvirtd.service
+  systemctl stop libvirtd{,-ro,-admin,-tcp,-tls}.socket 2>/dev/null || true
+  systemctl disable libvirtd.service
+  systemctl disable libvirtd{,-ro,-admin,-tcp,-tls}.socket 2>/dev/null || true
+  
+  # Mask to prevent accidental start as recommended by Libvirt documentation
+  systemctl mask libvirtd.service
+  systemctl mask libvirtd{,-ro,-admin,-tcp,-tls}.socket 2>/dev/null || true
+fi
+
+# 2. Enable and start the new modular daemons and sockets
+color_echo "$YELLOW" "Enabling modular sockets (virtqemud, virtnetworkd, etc.)..."
+
+for drv in qemu interface network nodedev nwfilter secret storage proxy; do
+  # Unmask in case they were previously masked
+  systemctl unmask virt${drv}d.service 2>/dev/null || true
+  systemctl unmask virt${drv}d{,-ro,-admin}.socket 2>/dev/null || true
+
+  # Enable services and sockets
+  systemctl enable virt${drv}d.service 2>/dev/null || true
+  systemctl enable virt${drv}d{,-ro,-admin}.socket 2>/dev/null || true
+done
+
+color_echo "$YELLOW" "Starting modular sockets..."
+for drv in qemu network nodedev nwfilter secret storage proxy; do
+  systemctl start virt${drv}d{,-ro,-admin}.socket 2>/dev/null || true
+done
 
 #############################
 #     End of Installation   #
 #############################
-color_echo "$GREEN" "Installation completed successfully."
+color_echo "$GREEN" "Installation and configuration completed successfully."
 color_echo "$GREEN" "Please log out and log back in for the group changes to take effect."
